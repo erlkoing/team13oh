@@ -1,0 +1,82 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: minecraft-server-azure
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: minecraft-server-azure
+    spec:
+      hostname: minecraft-hostname
+      volumes:
+      - name: minecraft-persistent-storage
+        persistentVolumeClaim:
+          claimName: az-files
+      containers:
+      - name: minecraft-server-azure
+        image: openhack/minecraft-server:2.0
+        ports: 
+        - containerPort: 25565
+          name: server
+        - containerPort: 25575
+          name: rcon
+        env:
+        - name: EULA
+          value: "TRUE"
+        volumeMounts:
+        - name: minecraft-persistent-storage
+          mountPath: /data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minecraft-server-azure
+spec:
+  type: LoadBalancer
+  ports:
+  - name: server
+    port: 25565
+  - name: rcon
+    port: 25575
+  selector:
+    app: minecraft-server-azure
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: azurefile
+provisioner: kubernetes.io/azure-file
+parameters:
+  skuName: Standard_LRS
+  location: westeurope
+  storageAccount: team13storageaccount
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minecraft-persistent-storage
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+  - ReadWriteMany
+  azureFile:
+    secretName: azure-secret
+    shareName: minecraft-data
+    readOnly: false
+  claimRef:
+    namespace: default
+    name: az-files
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: az-files
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
