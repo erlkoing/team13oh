@@ -28,6 +28,11 @@ spec:
         volumeMounts:
         - name: minecraft-persistent-storage
           mountPath: /data
+      - name: telegraf
+        image: kupczykso1/telegraf:6
+        ports:
+        - containerPort: 1000
+          name: server
 ---
 apiVersion: v1
 kind: Service
